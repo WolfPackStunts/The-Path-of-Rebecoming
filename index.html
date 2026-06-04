@@ -733,19 +733,42 @@ $('#brandHome').addEventListener('click',()=>showWelcome());
 $('#brandHome').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();showWelcome();}});
 
 /* ---------- Welcome ---------- */
-function hasProgress(){ return answeredCount()>0 || !!state.profile.started; }
+function hasProgress(){
+  return answeredCount()>0
+      || !!state.profile.started
+      || !!(state.profile.name && state.profile.name.length)
+      || (state.ui && state.ui.lastSection && state.ui.lastSection!==SECTIONS[0].id)
+      || (state.answers && Object.keys(state.answers).length>0);
+}
+function isReturning(){
+  // Any persisted signal at all means we've met this person before.
+  return hasProgress() || (Store.read()!==null);
+}
 function showWelcome(){
   $('#welcome').classList.remove('hide');
   $('#app').classList.remove('show');
-  $('#continueBtn').hidden = !hasProgress();
+  const returning = isReturning();
+  const cont = $('#continueBtn'), begin = $('#beginBtn');
+  cont.hidden = !returning;
+  if(returning){
+    cont.classList.add('primary');
+    begin.classList.remove('primary');
+    begin.parentNode.insertBefore(cont, begin); // Continue first
+  } else {
+    cont.classList.remove('primary');
+    begin.classList.add('primary');
+  }
 }
 function enterApp(){
+  if(!state.profile.started) state.profile.started = Date.now();
+  save(true);
   $('#welcome').classList.add('hide');
   $('#app').classList.add('show');
   render(current);
 }
 $('#beginBtn').addEventListener('click',()=>{
-  if(!hasProgress() && !state.profile.name){ openModal('nameModal'); $('#nameInput').focus(); }
+  // Only ask for a name on a genuine first visit with nothing saved at all.
+  if(!isReturning() && !state.profile.name){ openModal('nameModal'); $('#nameInput').focus(); }
   else enterApp();
 });
 $('#continueBtn').addEventListener('click',enterApp);
@@ -1172,7 +1195,7 @@ const Audio_ = (function(){
 /* ---------- Init ---------- */
 buildNav();
 refreshProgress();
-if(hasProgress()){ $('#continueBtn').hidden=false; }
+showWelcome();
 setSaveState('saved');
 // keep on welcome until user chooses
 })();

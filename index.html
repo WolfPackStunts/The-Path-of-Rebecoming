@@ -108,7 +108,7 @@ a{color:var(--accent);text-underline-offset:3px}
 .btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .btn.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
 .btn svg{width:15px;height:15px}
-#continueBtn[hidden],#welcome[hidden]{display:none!important}
+.btn[hidden],#continueBtn[hidden],#beginBtn[hidden],#welcome[hidden]{display:none!important}
 
 /* ============ APP SHELL ============ */
 #app{position:relative;z-index:1;min-height:100vh;display:flex;opacity:0;transition:opacity .6s ease .1s}
@@ -741,21 +741,31 @@ function hasProgress(){
       || (state.answers && Object.keys(state.answers).length>0);
 }
 function isReturning(){
-  // Any persisted signal at all means we've met this person before.
-  return hasProgress() || (Store.read()!==null);
+  // Treat as returning only if there is genuine content — not just an
+  // auto-saved empty shell. A name, any answer, or having navigated past
+  // the first page all count; an empty saved record does not.
+  if(state.answers && Object.keys(state.answers).some(k=>(state.answers[k]||'').trim().length>0)) return true;
+  if(state.profile && state.profile.name && state.profile.name.trim().length) return true;
+  if(state.ui && state.ui.lastSection && state.ui.lastSection!==SECTIONS[0].id) return true;
+  return false;
 }
 function showWelcome(){
   $('#welcome').classList.remove('hide');
   $('#app').classList.remove('show');
   const returning = isReturning();
   const cont = $('#continueBtn'), begin = $('#beginBtn');
-  cont.hidden = !returning;
   if(returning){
+    // Returning visitor: only ever offer Continue (Begin is hidden so it can't be mistaken for a reset).
+    cont.hidden = false;
     cont.classList.add('primary');
+    begin.hidden = true;
     begin.classList.remove('primary');
-    begin.parentNode.insertBefore(cont, begin); // Continue first
+    begin.parentNode.insertBefore(cont, begin); // Continue sits at the top
   } else {
+    // Genuine first visit, nothing saved: only Begin.
+    cont.hidden = true;
     cont.classList.remove('primary');
+    begin.hidden = false;
     begin.classList.add('primary');
   }
 }
@@ -996,8 +1006,9 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ---------- Save on hide/unload ---------- */
-window.addEventListener('beforeunload',()=>save(true));
-document.addEventListener('visibilitychange',()=>{ if(document.hidden) save(true); });
+function saveIfMeaningful(){ if(isReturning() || answeredCount()>0) save(true); }
+window.addEventListener('beforeunload',saveIfMeaningful);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) saveIfMeaningful(); });
 
 /* ============================================================
    AMBIENT AUDIO ENGINE — generative, non-repeating, tiny footprint.

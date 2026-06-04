@@ -634,7 +634,7 @@ function render(id){
       const qtext = blk.type==='prompt' ? blk.text : blk.label;
       const instr = blk.instr? `<div class="qinstr">${esc(blk.instr)}</div>`:'';
       const numHtml = label? `<span class="qnum">${esc(String(label))}.</span>`:`<span class="qnum">◇</span>`;
-      const ph = blk.type==='field' ? 'Write freely here…' : 'Take your time. Write what comes…';
+      const ph = '';
       html += `<div class="prompt${answered}" data-pid="${pid}">
         <div class="qhead">${numHtml}<div class="qtext">${esc(qtext)}</div></div>
         ${instr}
